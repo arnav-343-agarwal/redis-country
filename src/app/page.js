@@ -1,50 +1,61 @@
 'use client'
+
 import { useState } from 'react'
 
 export default function Home() {
-  const [countries, setCountries] = useState([])
-  const [timeTaken, setTimeTaken] = useState('')
-  const [source, setSource] = useState('')
+  const [query, setQuery] = useState('')
+  const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  const fetchCountries = async () => {
+  const handleSearch = async () => {
+    if (!query) return
+
     setLoading(true)
-    const res = await fetch('/api/countries')
-    const data = await res.json()
-    setCountries(data.countries || [])
-    setTimeTaken(data.timeTaken)
-    setSource(data.source)
-    setLoading(false)
+    setError(null)
+    setResult(null)
+
+    try {
+      const res = await fetch(`/api/country?name=${query}`)
+      const data = await res.json()
+
+      if (!res.ok) throw new Error(data.error || 'Something went wrong')
+
+      setResult(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>🌍 Country Data Viewer</h1>
-      <button
-        onClick={fetchCountries}
-        style={{
-          padding: '0.5rem 1rem',
-          background: '#0070f3',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer'
-        }}
-      >
-        {loading ? 'Loading...' : 'Get Countries'}
+    <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+      <h1>Country Info Search</h1>
+      <input
+        type="text"
+        placeholder="Enter country name"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        style={{ padding: '0.5rem', width: '300px', marginRight: '10px' }}
+      />
+      <button onClick={handleSearch} style={{ padding: '0.5rem 1rem' }}>
+        Search
       </button>
 
-      {countries.length > 0 && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <p>⏱️ Time Taken: {timeTaken}ms</p>
-          <p>📦 Data Source: {source}</p>
-          <ul>
-            {countries.map((country, i) => (
-              <li key={i}>{country.name.common}</li>
-            ))}
-          </ul>
+      {loading && <p>Loading...</p>}
+      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+
+      {result && (
+        <div style={{ marginTop: '2rem' }}>
+          <p><strong>Source:</strong> {result.source}</p>
+          <p><strong>Time Taken:</strong> {result.timeTakenMs} ms</p>
+          <h3>Result:</h3>
+          <pre style={{ background: '#eee', padding: '1rem', borderRadius: '5px' }}>
+            {JSON.stringify(result.data, null, 2)}
+          </pre>
         </div>
       )}
-    </div>
+    </main>
   )
 }
